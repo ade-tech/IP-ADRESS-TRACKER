@@ -42,7 +42,6 @@ const apiCall = async function (url) {
 
     const { lat, lng } = state.currentCoords.location;
     const { region, city } = state.currentCoords.location;
-    console.log(state);
 
     marker.setLatLng([lat, lng]);
     map.setView([lat, lng], 13);
@@ -57,10 +56,38 @@ const apiCall = async function (url) {
   }
 };
 
-form.addEventListener("submit", (e) => {
+const resolveDomain = async (domain) => {
+  const apiUrl = `https://dns.google/resolve?name=${domain}`;
+
+  try {
+    const response = await fetch(apiUrl);
+    const data = await response.json();
+
+    // Extract the IP address (A record for IPv4)
+    const ipAddresses = data.Answer
+      ? data.Answer.filter((answer) => answer.type === 1).map(
+          (answer) => answer.data
+        )
+      : [];
+
+    return ipAddresses[0];
+  } catch (error) {
+    console.error("Error resolving the domain:", error);
+  }
+};
+
+form.addEventListener("submit", async (e) => {
   e.preventDefault();
-  const API_URL = `https://geo.ipify.org/api/v2/country,city,vpn?apiKey=at_DrZsvyk4vrICfBD8LRswYDg56fIJk&ipAddress=${searchBar.value}`;
-  console.log(API_URL);
+  let searchBarValue = searchBar.value;
+  const pattern =
+    /\b(?:\d{1,3}\.){3}\d{1,3}\b|\b([0-9a-fA-F]{1,4}:){7}([0-9a-fA-F]{1,4}|:)\b|\b([0-9a-fA-F]{1,4}:){1,7}:([0-9a-fA-F]{1,4})?\b/g;
+
+  if (!pattern.test(searchBarValue)) {
+    searchBarValue = await resolveDomain(searchBarValue);
+  }
+
+  const API_URL = `https://geo.ipify.org/api/v2/country,city,vpn?apiKey=at_DrZsvyk4vrICfBD8LRswYDg56fIJk&ipAddress=${searchBarValue}`;
+
   apiCall(API_URL);
 });
 
